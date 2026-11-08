@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f3b2b">
+<title>Dado 3D</title>
+<style>
+  :root {
+    --s: min(34vmin, 200px);          /* tamaño del dado */
+    --felt-1: #217452;
+    --felt-2: #0c2c20;
+    --ivory: #f6efdc;
+    --ivory-edge: #d9cfb4;
+    --pip: #7a1420;
+    --text: #f3ecd6;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  html, body { height: 100%; }
+  body {
+    overflow: hidden;
+    color: var(--text);
+    font-family: Georgia, "Times New Roman", serif;
+    background:
+      repeating-linear-gradient(45deg, rgba(255,255,255,.015) 0 2px, transparent 2px 4px),
+      radial-gradient(ellipse at 50% 40%, var(--felt-1), var(--felt-2) 75%);
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+  }
+  main { display: grid; justify-items: center; gap: 5vmin; }
+
+  /* Escena 3D */
+  .stage { perspective: calc(var(--s) * 5); width: var(--s); height: var(--s); position: relative; }
+  .toss { width: 100%; height: 100%; transform-style: preserve-3d; }
+  .toss.go { animation: toss 1.3s cubic-bezier(.3,.1,.3,1); }
+  .tilt { width: 100%; height: 100%; transform-style: preserve-3d; transform: rotateX(-24deg) rotateY(-30deg); }
+  .cube {
+    width: 100%; height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transform: rotateX(0deg) rotateY(0deg);
+    transition: transform 1.3s cubic-bezier(.15,.7,.25,1);
+  }
+  .face {
+    position: absolute; inset: 0;
+    display: grid;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    padding: 15%;
+    border-radius: 9%;
+    background:
+      radial-gradient(circle at 30% 25%, #fffaf0 0%, var(--ivory) 45%, var(--ivory-edge) 100%);
+    box-shadow: inset 0 0 calc(var(--s) * .09) rgba(120, 95, 40, .45),
+                inset 0 0 0 1px rgba(255,255,255,.4);
+    backface-visibility: hidden;
+  }
+  .f1 { transform: translateZ(calc(var(--s) / 2)); }
+  .f6 { transform: rotateY(180deg) translateZ(calc(var(--s) / 2)); }
+  .f3 { transform: rotateY(90deg) translateZ(calc(var(--s) / 2)); }
+  .f4 { transform: rotateY(-90deg) translateZ(calc(var(--s) / 2)); }
+  .f2 { transform: rotateX(90deg) translateZ(calc(var(--s) / 2)); }
+  .f5 { transform: rotateX(-90deg) translateZ(calc(var(--s) / 2)); }
+
+  .pip {
+    place-self: center;
+    width: 78%; aspect-ratio: 1; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #b03040 0%, var(--pip) 55%, #4a0a12 100%);
+    box-shadow: inset 0 calc(var(--s) * .012) calc(var(--s) * .02) rgba(0,0,0,.5),
+                0 1px 0 rgba(255,255,255,.7);
+  }
+  .f1 .pip { width: 120%; }
+
+  /* Sombra sobre el paño */
+  .shadow {
+    position: absolute; left: 50%; bottom: calc(var(--s) * -.22);
+    width: calc(var(--s) * 1.1); height: calc(var(--s) * .22);
+    margin-left: calc(var(--s) * -.55);
+    background: radial-gradient(ellipse, rgba(0,0,0,.55), transparent 70%);
+    filter: blur(4px);
+  }
+  .shadow.go { animation: shadow 1.3s cubic-bezier(.3,.1,.3,1); }
+
+  @keyframes toss {
+    0%   { transform: translateY(0) scale(1); }
+    38%  { transform: translateY(calc(var(--s) * -.9)) scale(1.18); }
+    68%  { transform: translateY(0) scale(1); }
+    80%  { transform: translateY(calc(var(--s) * -.14)) scale(1.03); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  @keyframes shadow {
+    0%   { transform: scale(1); opacity: 1; }
+    38%  { transform: scale(.6); opacity: .45; }
+    68%  { transform: scale(1); opacity: 1; }
+    80%  { transform: scale(.85); opacity: .7; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Texto */
+  .result {
+    font-size: clamp(3rem, 14vmin, 6rem);
+    line-height: 1;
+    min-height: 1em;
+    font-variant-numeric: lining-nums;
+    text-shadow: 0 2px 12px rgba(0,0,0,.4);
+  }
+  .hint { font-style: italic; opacity: .75; font-size: clamp(1rem, 3.2vmin, 1.25rem); }
+  .history { opacity: .6; letter-spacing: .25em; font-size: 1rem; min-height: 1.4em; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cube { transition-duration: .2s; }
+    .toss.go, .shadow.go { animation: none; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <div class="stage" aria-hidden="true">
+    <div class="shadow" id="shadow"></div>
+    <div class="toss" id="toss">
+      <div class="tilt">
+        <div class="cube" id="cube"></div>
+      </div>
+    </div>
+  </div>
+  <div class="result" id="result" role="status" aria-live="polite">&nbsp;</div>
+  <p class="hint" id="hint">Tocá la pantalla para tirar el dado</p>
+  <p class="history" id="history" aria-label="Últimas tiradas"></p>
+</main>
+
+<script>
+(() => {
+  const cube = document.getElementById('cube');
+  const toss = document.getElementById('toss');
+  const shadow = document.getElementById('shadow');
+  const result = document.getElementById('result');
+  const hint = document.getElementById('hint');
+  const history = document.getElementById('history');
+
+  // Posiciones de los puntos en una grilla de 3x3
+  const PIPS = {
+    1: [4], 2: [0, 8], 3: [0, 4, 8],
+    4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8]
+  };
+  for (let n = 1; n <= 6; n++) {
+    const face = document.createElement('div');
+    face.className = `face f${n}`;
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement('div');
+      cell.style.display = 'grid';
+      if (PIPS[n].includes(i)) {
+        const pip = document.createElement('span');
+        pip.className = 'pip';
+        cell.appendChild(pip);
+      }
+      face.appendChild(cell);
+    }
+    cube.appendChild(face);
+  }
+
+  // Rotación (X, Y) que deja cada cara mirando al frente
+  const TARGET = { 1: [0, 0], 6: [0, 180], 3: [0, -90], 4: [0, 90], 2: [-90, 0], 5: [90, 0] };
+
+  let rx = 0, ry = 0, rolling = false, past = [];
+
+  const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+  function roll() {
+    if (rolling) return;
+    rolling = true;
+    hint.style.visibility = 'hidden';
+    result.innerHTML = '&nbsp;';
+
+    const n = randInt(1, 6);                 // resultado aleatorio
+    const [fx, fy] = TARGET[n];
+    // Giros completos extra para que gire siempre hacia adelante
+    rx = (Math.round(rx / 360) + randInt(2, 4)) * 360 + fx;
+    ry = (Math.round(ry / 360) + randInt(2, 4)) * 360 + fy;
+    cube.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
+
+    toss.classList.remove('go'); shadow.classList.remove('go');
+    void toss.offsetWidth;                   // reinicia la animación
+    toss.classList.add('go'); shadow.classList.add('go');
+
+    const done = matchMedia('(prefers-reduced-motion: reduce)').matches ? 250 : 1350;
+    setTimeout(() => {
+      result.textContent = n;
+      past = [n, ...past].slice(0, 8);
+      history.textContent = past.slice(1).join('  ');
+      rolling = false;
+    }, done);
+  }
+
+  document.addEventListener('pointerdown', roll);
+  document.addEventListener('keydown', e => {
+    if (e.code === 'Space' || e.code === 'Enter') { e.preventDefault(); roll(); }
+  });
+})();
+</script>
+</body>
+</html>
