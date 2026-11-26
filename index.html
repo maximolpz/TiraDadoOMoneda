@@ -4,23 +4,31 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f3b2b">
-<title>Dado 3D</title>
+<title>Dado y Moneda 3D</title>
 <style>
   :root {
     --s: clamp(110px, min(34vmin, 44vw), 210px);
+    --coin-s: clamp(135px, min(40vmin, 50vw), 230px);
     --felt-1: #217452;
     --felt-2: #0c2c20;
     --ivory: #f6efdc;
     --ivory-edge: #d9cfb4;
     --pip: #7a1420;
+    --gold-1: #fff0a8;
+    --gold-2: #e3b43c;
+    --gold-3: #9c7216;
+    --gold-dark: #5c3f05;
     --text: #f3ecd6;
   }
+
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
   html, body {
     width: 100%;
     height: 100%;
     min-height: 100dvh;
   }
+
   body {
     overflow: hidden;
     color: var(--text);
@@ -30,7 +38,6 @@
       radial-gradient(ellipse at 50% 42%, var(--felt-1), var(--felt-2) 78%);
     display: grid;
     place-items: center;
-    cursor: pointer;
     user-select: none;
     -webkit-user-select: none;
     -webkit-tap-highlight-color: transparent;
@@ -41,16 +48,110 @@
       max(20px, env(safe-area-inset-bottom))
       max(18px, env(safe-area-inset-left));
   }
-  main {
+
+  .view {
     width: 100%;
     max-width: 640px;
+    height: 100%;
+    display: grid;
+    place-items: center;
+  }
+
+  .hidden-view {
+    display: none !important;
+  }
+
+  /* ================= PANTALLA DE INICIO ================= */
+  .menu {
+    display: grid;
+    gap: clamp(18px, 4dvh, 28px);
+    width: min(100%, 340px);
+    justify-items: stretch;
+  }
+
+  .menu-btn {
+    appearance: none;
+    border: 2px solid rgba(243, 236, 214, 0.35);
+    border-radius: 18px;
+    padding: clamp(18px, 3.2dvh, 24px) 24px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.22));
+    color: var(--text);
+    font-family: inherit;
+    font-size: clamp(1.35rem, 5vw, 1.75rem);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow:
+      0 10px 24px rgba(0, 0, 0, 0.35),
+      inset 0 1px 0 rgba(255, 255, 255, 0.25);
+    transition: transform 0.14s ease, background 0.2s ease, border-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .menu-btn:hover {
+    border-color: rgba(243, 236, 214, 0.75);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.18), rgba(0, 0, 0, 0.25));
+  }
+
+  .menu-btn:active {
+    transform: scale(0.97);
+  }
+
+  /* Botón volver al inicio */
+  .back-btn {
+    position: fixed;
+    top: max(14px, env(safe-area-inset-top));
+    left: max(14px, env(safe-area-inset-left));
+    z-index: 20;
+    appearance: none;
+    border: 1.5px solid rgba(243, 236, 214, 0.3);
+    border-radius: 999px;
+    padding: 8px 16px;
+    background: rgba(12, 44, 32, 0.72);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    color: var(--text);
+    font-family: inherit;
+    font-size: clamp(0.9rem, 3.2vw, 1.05rem);
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: transform 0.14s ease, border-color 0.2s ease;
+  }
+
+  .back-btn:active {
+    transform: scale(0.95);
+  }
+
+  /* ================= ESCENA DE JUEGO ================= */
+  .game-area {
+    width: 100%;
+    height: 100%;
     display: grid;
     justify-items: center;
     align-content: center;
-    gap: clamp(28px, 6dvh, 56px);
+    gap: clamp(32px, 6.5dvh, 60px);
+    cursor: pointer;
   }
 
-  /* Escena 3D */
+  .prompt {
+    text-align: center;
+    line-height: 1.25;
+    letter-spacing: .01em;
+    text-shadow: 0 2px 10px rgba(0, 0, 0, .45);
+    max-width: 24ch;
+    font-size: clamp(1.15rem, 4vw, 1.55rem);
+    opacity: .94;
+    transition: opacity .25s ease;
+  }
+
+  .prompt.hidden {
+    opacity: 0;
+  }
+
+  /* ================= DADO 3D ================= */
   .stage {
     perspective: calc(var(--s) * 5);
     width: var(--s);
@@ -112,7 +213,93 @@
   }
   .f1 .pip { width: 120%; }
 
-  /* Sombra sobre el paño */
+  /* ================= MONEDA 3D ================= */
+  .coin-stage {
+    perspective: calc(var(--coin-s) * 4.5);
+    width: var(--coin-s);
+    height: var(--coin-s);
+    position: relative;
+  }
+
+  .coin-toss {
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+  }
+
+  .coin-toss.go {
+    animation: coinToss 1.35s cubic-bezier(.28, .1, .3, 1);
+  }
+
+  .coin-tilt {
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+    transform: rotateX(22deg);
+  }
+
+  .coin {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transform: rotateX(0deg);
+    transition: transform 1.35s cubic-bezier(.15, .72, .22, 1);
+  }
+
+  .coin-side {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    backface-visibility: hidden;
+    background:
+      radial-gradient(circle at 32% 28%, var(--gold-1) 0%, var(--gold-2) 52%, var(--gold-3) 100%);
+    box-shadow:
+      inset 0 0 0 calc(var(--coin-s) * 0.045) rgba(255, 248, 210, 0.55),
+      inset 0 0 0 calc(var(--coin-s) * 0.08) var(--gold-3),
+      inset 0 0 calc(var(--coin-s) * 0.12) rgba(60, 40, 0, 0.5),
+      0 6px 14px rgba(0, 0, 0, 0.45);
+  }
+
+  .coin-side::before {
+    content: "";
+    position: absolute;
+    inset: 10%;
+    border-radius: 50%;
+    border: 2px dashed rgba(92, 63, 5, 0.45);
+  }
+
+  .coin-front {
+    transform: translateZ(4px);
+  }
+
+  .coin-back {
+    transform: rotateX(180deg) translateZ(4px);
+  }
+
+  .coin-design {
+    display: grid;
+    place-items: center;
+    gap: 4px;
+    color: var(--gold-dark);
+    text-shadow: 0 1px 0 rgba(255, 250, 220, 0.75);
+  }
+
+  .coin-icon {
+    font-size: calc(var(--coin-s) * 0.28);
+    line-height: 1;
+  }
+
+  .coin-label {
+    font-size: calc(var(--coin-s) * 0.155);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Sombra compartida */
   .shadow {
     position: absolute;
     left: 50%;
@@ -127,6 +314,13 @@
     animation: shadow 1.3s cubic-bezier(.3,.1,.3,1);
   }
 
+  .coin-stage .shadow {
+    bottom: calc(var(--coin-s) * -.18);
+    width: calc(var(--coin-s) * 1.05);
+    height: calc(var(--coin-s) * .2);
+    margin-left: calc(var(--coin-s) * -.525);
+  }
+
   @keyframes toss {
     0%   { transform: translateY(0) scale(1); }
     38%  { transform: translateY(calc(var(--s) * -.9)) scale(1.18); }
@@ -134,6 +328,15 @@
     80%  { transform: translateY(calc(var(--s) * -.14)) scale(1.03); }
     100% { transform: translateY(0) scale(1); }
   }
+
+  @keyframes coinToss {
+    0%   { transform: translateY(0) scale(1); }
+    40%  { transform: translateY(calc(var(--coin-s) * -1.05)) scale(1.22); }
+    72%  { transform: translateY(0) scale(1); }
+    84%  { transform: translateY(calc(var(--coin-s) * -.12)) scale(1.03); }
+    100% { transform: translateY(0) scale(1); }
+  }
+
   @keyframes shadow {
     0%   { transform: scale(1); opacity: 1; }
     38%  { transform: scale(.6); opacity: .45; }
@@ -142,54 +345,102 @@
     100% { transform: scale(1); opacity: 1; }
   }
 
-  /* Texto único */
-  .prompt {
-    text-align: center;
-    line-height: 1.2;
-    letter-spacing: .01em;
-    text-shadow: 0 2px 10px rgba(0, 0, 0, .45);
-    max-width: 24ch;
-    transition: font-size .25s ease, opacity .25s ease;
-  }
-  .prompt.start {
-    font-size: clamp(1.85rem, 6.5vw, 3rem);
-    font-weight: 700;
-  }
-  .prompt.rolling-hint {
-    font-size: clamp(1.05rem, 3.6vw, 1.45rem);
-    opacity: .92;
-  }
-  .prompt.hidden {
-    opacity: 0;
-  }
-
   @media (prefers-reduced-motion: reduce) {
-    .cube, .prompt { transition-duration: .15s; }
-    .toss.go, .shadow.go { animation-duration: .2s; }
+    .cube, .coin, .prompt { transition-duration: .15s; }
+    .toss.go, .coin-toss.go, .shadow.go { animation-duration: .2s; }
   }
 </style>
 </head>
 <body>
-<main>
-  <div class="stage" aria-hidden="true">
-    <div class="shadow" id="shadow"></div>
-    <div class="toss" id="toss">
-      <div class="tilt">
-        <div class="cube" id="cube"></div>
-      </div>
+
+  <!-- PANTALLA DE INICIO -->
+  <section class="view" id="homeView" aria-label="Menú principal">
+    <div class="menu">
+      <button type="button" class="menu-btn" id="btnDice">🎲 Tirar el dado</button>
+      <button type="button" class="menu-btn" id="btnCoin">🪙 Cara o Seca</button>
     </div>
-  </div>
-  <p class="prompt start" id="prompt" role="status" aria-live="polite">Tirar el dado</p>
-</main>
+  </section>
+
+  <!-- BOTÓN VOLVER -->
+  <button type="button" class="back-btn hidden-view" id="btnBack">← Inicio</button>
+
+  <!-- PANTALLA DADO -->
+  <section class="view hidden-view" id="diceView" aria-label="Dado 3D">
+    <main class="game-area" id="diceArea">
+      <div class="stage" aria-hidden="true">
+        <div class="shadow" id="diceShadow"></div>
+        <div class="toss" id="diceToss">
+          <div class="tilt">
+            <div class="cube" id="cube"></div>
+          </div>
+        </div>
+      </div>
+      <p class="prompt" id="dicePrompt">Toca la pantalla para tirar el dado</p>
+    </main>
+  </section>
+
+  <!-- PANTALLA MONEDA (CARA O SECA) -->
+  <section class="view hidden-view" id="coinView" aria-label="Moneda 3D Cara o Seca">
+    <main class="game-area" id="coinArea">
+      <div class="coin-stage" aria-hidden="true">
+        <div class="shadow" id="coinShadow"></div>
+        <div class="coin-toss" id="coinToss">
+          <div class="coin-tilt">
+            <div class="coin" id="coin">
+              <div class="coin-side coin-front">
+                <div class="coin-design">
+                  <span class="coin-icon">☀️</span>
+                  <span class="coin-label">Cara</span>
+                </div>
+              </div>
+              <div class="coin-side coin-back">
+                <div class="coin-design">
+                  <span class="coin-icon">✦</span>
+                  <span class="coin-label">Seca</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="prompt" id="coinPrompt">Toca la pantalla para tirar la moneda</p>
+    </main>
+  </section>
 
 <script>
 (() => {
-  const cube = document.getElementById('cube');
-  const toss = document.getElementById('toss');
-  const shadow = document.getElementById('shadow');
-  const prompt = document.getElementById('prompt');
+  /* ================= NAVEGACIÓN ================= */
+  const homeView = document.getElementById('homeView');
+  const diceView = document.getElementById('diceView');
+  const coinView = document.getElementById('coinView');
+  const btnBack  = document.getElementById('btnBack');
 
-  // Posiciones de los puntos en una grilla de 3x3
+  let activeMode = 'home'; // 'home' | 'dice' | 'coin'
+
+  function showView(mode) {
+    activeMode = mode;
+    homeView.classList.toggle('hidden-view', mode !== 'home');
+    diceView.classList.toggle('hidden-view', mode !== 'dice');
+    coinView.classList.toggle('hidden-view', mode !== 'coin');
+    btnBack.classList.toggle('hidden-view', mode === 'home');
+  }
+
+  document.getElementById('btnDice').addEventListener('click', () => showView('dice'));
+  document.getElementById('btnCoin').addEventListener('click', () => showView('coin'));
+  btnBack.addEventListener('click', (e) => {
+    e.stopPropagation();
+    showView('home');
+  });
+
+  const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+  const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ================= LÓGICA DEL DADO ================= */
+  const cube       = document.getElementById('cube');
+  const diceToss   = document.getElementById('diceToss');
+  const diceShadow = document.getElementById('diceShadow');
+  const dicePrompt = document.getElementById('dicePrompt');
+
   const PIPS = {
     1: [4], 2: [0, 8], 3: [0, 4, 8],
     4: [0, 2, 6, 8], 5: [0, 2, 4, 6, 8], 6: [0, 2, 3, 5, 6, 8]
@@ -211,15 +462,7 @@
     cube.appendChild(face);
   }
 
-  // Rotación (rx, ry) que coloca cada cara n en la CARA SUPERIOR (+Y) del cubo.
-  // Nota: en CSS 3D, rotateX(a) rotateY(b) rota el vector local v -> Rx(a) * Ry(b) * v.
-  // Para que la normal local n_i quede apuntando hacia arriba (0, 1, 0):
-  // - Cara 1: normal (0, 0, 1) -> con rx = -90, ry = 0 => (0, 1, 0)
-  // - Cara 6: normal (0, 0, -1) -> con rx = 90, ry = 0 => (0, 1, 0)
-  // - Cara 2: normal (0, 1, 0) -> con rx = 0, ry = 0 => (0, 1, 0)
-  // - Cara 5: normal (0, -1, 0) -> con rx = 180, ry = 0 => (0, 1, 0)
-  // - Cara 3: normal (1, 0, 0) -> Ry(90)*(1,0,0) = (0,0,-1); Rx(90)*(0,0,-1) = (0,1,0) => rx = 90, ry = 90
-  // - Cara 4: normal (-1, 0, 0) -> Ry(-90)*(-1,0,0) = (0,0,-1); Rx(90)*(0,0,-1) = (0,1,0) => rx = 90, ry = -90
+  // Cara superior (+Y) como resultado
   const TOP_TARGET = {
     1: [-90, 0],
     2: [0, 0],
@@ -229,16 +472,12 @@
     6: [90, 0]
   };
 
-  let rx = 0, ry = 0, rolling = false;
+  let rx = 0, ry = 0, diceRolling = false;
 
-  const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-
-  function roll() {
-    if (rolling) return;
-    rolling = true;
-
-    prompt.textContent = 'Toca la pantalla para tirar el dado';
-    prompt.className = 'prompt rolling-hint hidden';
+  function rollDice() {
+    if (diceRolling || activeMode !== 'dice') return;
+    diceRolling = true;
+    dicePrompt.classList.add('hidden');
 
     const n = randInt(1, 6);
     const [tx, ty] = TOP_TARGET[n];
@@ -247,24 +486,61 @@
     ry = (Math.round(ry / 360) + randInt(2, 4)) * 360 + ty;
     cube.style.transform = `rotateX(${rx}deg) rotateY(${ry}deg)`;
 
-    toss.classList.remove('go');
-    shadow.classList.remove('go');
-    void toss.offsetWidth;
-    toss.classList.add('go');
-    shadow.classList.add('go');
+    diceToss.classList.remove('go');
+    diceShadow.classList.remove('go');
+    void diceToss.offsetWidth;
+    diceToss.classList.add('go');
+    diceShadow.classList.add('go');
 
-    const done = matchMedia('(prefers-reduced-motion: reduce)').matches ? 250 : 1350;
     setTimeout(() => {
-      prompt.className = 'prompt rolling-hint';
-      rolling = false;
-    }, done);
+      dicePrompt.classList.remove('hidden');
+      diceRolling = false;
+    }, reducedMotion() ? 250 : 1350);
   }
 
-  document.addEventListener('pointerdown', roll);
+  document.getElementById('diceArea').addEventListener('pointerdown', rollDice);
+
+  /* ================= LÓGICA DE LA MONEDA ================= */
+  const coin       = document.getElementById('coin');
+  const coinToss   = document.getElementById('coinToss');
+  const coinShadow = document.getElementById('coinShadow');
+  const coinPrompt = document.getElementById('coinPrompt');
+
+  let coinRx = 0, coinFlipping = false;
+
+  function flipCoin() {
+    if (coinFlipping || activeMode !== 'coin') return;
+    coinFlipping = true;
+    coinPrompt.classList.add('hidden');
+
+    // 0 = Cara (0 deg), 1 = Seca (180 deg)
+    const isSeca = randInt(0, 1) === 1;
+    const targetAngle = isSeca ? 180 : 0;
+
+    coinRx = (Math.round(coinRx / 360) + randInt(4, 6)) * 360 + targetAngle;
+    coin.style.transform = `rotateX(${coinRx}deg)`;
+
+    coinToss.classList.remove('go');
+    coinShadow.classList.remove('go');
+    void coinToss.offsetWidth;
+    coinToss.classList.add('go');
+    coinShadow.classList.add('go');
+
+    setTimeout(() => {
+      coinPrompt.classList.remove('hidden');
+      coinFlipping = false;
+    }, reducedMotion() ? 250 : 1400);
+  }
+
+  document.getElementById('coinArea').addEventListener('pointerdown', flipCoin);
+
+  /* Teclado (Espacio / Enter) */
   document.addEventListener('keydown', e => {
     if (e.code === 'Space' || e.code === 'Enter') {
-      e.preventDefault();
-      roll();
+      if (activeMode === 'dice') { e.preventDefault(); rollDice(); }
+      if (activeMode === 'coin') { e.preventDefault(); flipCoin(); }
+    } else if (e.code === 'Escape' && activeMode !== 'home') {
+      showView('home');
     }
   });
 })();
