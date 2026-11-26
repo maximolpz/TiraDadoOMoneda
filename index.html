@@ -99,22 +99,7 @@
     80%  { transform: scale(.85); opacity: .7; }
     100% { transform: scale(1); opacity: 1; }
   }
-
-  /* Texto */
-  .result {
-    font-size: clamp(3rem, 14vmin, 6rem);
-    line-height: 1;
-    min-height: 1em;
-    font-variant-numeric: lining-nums;
-    text-shadow: 0 2px 12px rgba(0,0,0,.4);
-  }
-  .hint { font-style: italic; opacity: .75; font-size: clamp(1rem, 3.2vmin, 1.25rem); }
-  .history { opacity: .6; letter-spacing: .25em; font-size: 1rem; min-height: 1.4em; }
-
-  @media (prefers-reduced-motion: reduce) {
-    .cube { transition-duration: .2s; }
-    .toss.go, .shadow.go { animation: none; }
-  }
+  
 </style>
 </head>
 <body>
